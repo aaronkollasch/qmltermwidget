@@ -574,6 +574,7 @@ public slots:
     void simulateKeyPress(int key, int modifiers, bool pressed, quint32 nativeScanCode, const QString &text);
     void simulateKeySequence(const QKeySequence &sequence);
     void simulateWheel(int x, int y, int buttons, int modifiers, QPointF angleDelta);
+    void simulateWheel(int x, int y, int gx, int gy, int buttons, int modifiers, int phase, bool inverted, QPoint pixelDelta, QPoint angleDelta);
     void simulateMouseMove(int x, int y, int button, int buttons, int modifiers);
     void simulateMousePress(int x, int y, int button, int buttons, int modifiers);
     void simulateMouseRelease(int x, int y, int button, int buttons, int modifiers);

@@ -2592,6 +2592,11 @@ void TerminalDisplay::wheelEvent( QWheelEvent* ev )
 {
   if (ev->orientation() != Qt::Vertical)
     return;
+  /* fprintf(stderr, "x,y=%d,%d\tgx,gy=%d,%d\tdy=%d\tp=%d\n", ev->x(), ev->y(), ev->globalX(), ev->globalY(), ev->pixelDelta().y(), ev->phase()); */
+  if ((ev->phase() == Qt::ScrollBegin || ev->phase() == Qt::ScrollEnd || ev->phase() == Qt::ScrollMomentum) && ev->pixelDelta().isNull())
+      return;
+  if (ev->pixelDelta().y() == 0)
+      return;
 
   // if the terminal program is not interested mouse events
   // then send the event to the scrollbar if the slider has room to move
@@ -2610,7 +2615,7 @@ void TerminalDisplay::wheelEvent( QWheelEvent* ev )
         // to get a reasonable scrolling speed, scroll by one line for every 5 degrees
         // of mouse wheel rotation.  Mouse wheels typically move in steps of 15 degrees,
         // giving a scroll of 3 lines
-        int key = ev->delta() > 0 ? Qt::Key_Up : Qt::Key_Down;
+        int key = (ev->delta() > 0) ^ (ev->inverted()) ? Qt::Key_Up : Qt::Key_Down;
 
         // QWheelEvent::delta() gives rotation in eighths of a degree
         int wheelDegrees = ev->delta() / 8;
@@ -2630,10 +2635,30 @@ void TerminalDisplay::wheelEvent( QWheelEvent* ev )
     int charColumn;
     getCharacterPosition( ev->pos() , charLine , charColumn );
 
-    emit mouseSignal( ev->delta() > 0 ? 4 : 5,
-                      charColumn + 1,
-                      charLine + 1 +_scrollBar->value() -_scrollBar->maximum() ,
-                      0);
+    static int pixelsPerLine = 16;
+    static int smoothScrollAccumulator = 0;
+    QPoint numPixels = ev->pixelDelta();
+    if (!numPixels.isNull()) {
+        int linesToScroll = 0;
+        smoothScrollAccumulator += numPixels.y();
+        if (abs(smoothScrollAccumulator) >= pixelsPerLine) {
+            int key = (smoothScrollAccumulator > 0) ^ (ev->inverted()) ? Qt::Key_Up : Qt::Key_Down;
+            linesToScroll = fmin(32, (abs(smoothScrollAccumulator)+1) / pixelsPerLine);
+
+            for (int i=0;i<linesToScroll;i++)
+                emit mouseSignal( smoothScrollAccumulator > 0 ? 4 : 5,
+                                  charColumn + 1,
+                                  charLine + 1,
+                                  0);
+        }
+        /* fprintf(stderr, "y=%d\tdy=%d\ts=%d\n", smoothScrollAccumulator, numPixels.y(), smoothScrollAccumulator > 0 ? linesToScroll : -linesToScroll); */
+        smoothScrollAccumulator %= pixelsPerLine;
+    } else {
+        emit mouseSignal( (ev->angleDelta().y() > 0) ^ (ev->inverted()) ? 4 : 5,
+                          charColumn + 1,
+                          charLine + 1 +_scrollBar->value() -_scrollBar->maximum() ,
+                          0);
+    }
   }
 }
 
@@ -3534,6 +3559,12 @@ void TerminalDisplay::simulateKeySequence(const QKeySequence &keySequence)
 
 void TerminalDisplay::simulateWheel(int x, int y, int buttons, int modifiers, QPointF angleDelta){
     QWheelEvent event(QPointF(x,y), angleDelta.y(), (Qt::MouseButton) buttons, (Qt::KeyboardModifier) modifiers);
+    wheelEvent(&event);
+}
+
+void TerminalDisplay::simulateWheel(int x, int y, int gx, int gy, int buttons, int modifiers, int phase, bool inverted, QPoint pixelDelta, QPoint angleDelta){
+    QWheelEvent event(QPointF(x,y), QPointF(gx, gy), pixelDelta, angleDelta, (Qt::MouseButton) buttons, (Qt::KeyboardModifier) modifiers,
+            (Qt::ScrollPhase) phase, inverted, Qt::MouseEventSynthesizedByApplication);
     wheelEvent(&event);
 }
 
