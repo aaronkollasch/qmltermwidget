@@ -203,6 +203,7 @@ void Emulation::receiveChar(wchar_t c)
   switch (c)
   {
     case '\b'      : _currentScreen->backspace();                 break;
+    case '\x7f'    : _currentScreen->backspace();                 break;
     case '\t'      : _currentScreen->tab();                       break;
     case '\n'      : _currentScreen->newLine();                   break;
     case '\r'      : _currentScreen->toStartOfLine();             break;
@@ -364,7 +365,7 @@ void Emulation::bufferedUpdate()
 
 char Emulation::eraseChar() const
 {
-  return '\b';
+  return '\x7f';
 }
 
 void Emulation::setImageSize(int lines, int columns)

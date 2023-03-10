@@ -475,6 +475,7 @@ void Vt102Emulation::processToken(int token, wchar_t p, int q)
     case TY_CTL('G'      ) : emit stateSet(NOTIFYBELL);
                                 break; //VT100
     case TY_CTL('H'      ) : _currentScreen->backspace            (          ); break; //VT100
+    case TY_CTL('?'      ) : _currentScreen->backspace            (          ); break; //VT100
     case TY_CTL('I'      ) : _currentScreen->tab                  (          ); break; //VT100
     case TY_CTL('J'      ) : _currentScreen->newLine              (          ); break; //VT100
     case TY_CTL('K'      ) : _currentScreen->newLine              (          ); break; //VT100
@@ -1400,7 +1401,7 @@ char Vt102Emulation::eraseChar() const
   if ( entry.text().count() > 0 )
       return entry.text().at(0);
   else
-      return '\b';
+      return '\x7f';
 }
 
 void Vt102Emulation::reportDecodingError()
